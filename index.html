@@ -28,6 +28,7 @@
         <p class="label">Now playing</p>
         <h2 id="video-title">Loading…</h2>
         <p id="video-meta" class="meta"></p>
+        <p id="video-tags" class="video-tags"></p>
       </div>
 
       <div class="controls">
@@ -38,10 +39,29 @@
 
     <section class="queue-card">
       <div class="queue-header">
-        <h3>Up next</h3>
-        <button id="btn-reshuffle" type="button" class="link-button">Reshuffle all</button>
+        <h3>Browse</h3>
+        <button id="btn-reshuffle" type="button" class="link-button">Reshuffle results</button>
       </div>
-      <div id="queue" class="queue" aria-label="Up next videos"></div>
+
+      <div class="filters">
+        <label class="search-field">
+          <span class="sr-only">Search videos</span>
+          <input id="search-input" type="search" placeholder="Search title, channel, or tags…" autocomplete="off">
+        </label>
+
+        <label class="channel-field">
+          <span>Channel</span>
+          <select id="channel-filter">
+            <option value="all">All channels</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="tag-filters" class="tag-filters" aria-label="Filter by tag"></div>
+      <p id="results-count" class="results-count"></p>
+
+      <div id="queue" class="queue" aria-label="Video browse grid"></div>
+      <p id="empty-state" class="empty-state" hidden>No videos match your filters.</p>
     </section>
   </main>
 

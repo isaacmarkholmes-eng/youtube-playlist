@@ -16,7 +16,12 @@ No build step, no backend, no API keys.
 Open `videos.js` and add entries like this:
 
 ```javascript
-{ id: "VIDEO_ID_HERE", title: "Optional display name" },
+{
+  id: "VIDEO_ID_HERE",
+  title: "Optional display name",
+  channel: "Channel Name",
+  tags: ["Category", "Another Tag"],
+},
 ```
 
 The `id` is the part after `v=` in a YouTube URL.
@@ -56,6 +61,13 @@ Upload these files to any static host:
 1. Push this folder to a repo.
 2. Settings → Pages → deploy from branch.
 3. Choose `main` and root `/`.
+
+## Browse, search, and filters
+
+- **Search** matches title, channel, and tags.
+- **Channel** dropdown limits results to one channel.
+- **Tag chips** filter by category (click to toggle).
+- **Another random** and **Reshuffle results** only use the currently filtered videos.
 
 ## Notes
 
