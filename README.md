@@ -9,16 +9,14 @@ No build step, no backend, no API keys.
 - `index.html` — page layout
 - `styles.css` — styling
 - `app.js` — shuffle + player logic
-- `videos.json` — your video list
+- `videos.js` — your video list
 
 ## Edit your video list
 
-Open `videos.json` and add entries like this:
+Open `videos.js` and add entries like this:
 
-```json
-[
-  { "id": "VIDEO_ID_HERE", "title": "Optional display name" }
-]
+```javascript
+{ id: "VIDEO_ID_HERE", title: "Optional display name" },
 ```
 
 The `id` is the part after `v=` in a YouTube URL.
@@ -63,4 +61,5 @@ Upload these files to any static host:
 
 - Videos must allow embedding on other sites.
 - Some videos block playback outside youtube.com.
-- Replace the sample entries in `videos.json` with your own list.
+- Replace the sample entries in `videos.js` with your own list.
+- If you open `index.html` by double-clicking it, that works now. You do not need a local server unless you prefer one.
