@@ -1,4 +1,5 @@
 const RSS_URL = "https://www.youtube.com/feeds/videos.xml?channel_id=";
+const SHORT_MAX_SECONDS = 60;
 
 function parseFeed(xml) {
   const videos = [];
@@ -23,6 +24,48 @@ function parseFeed(xml) {
   return videos;
 }
 
+function isShortVideo(durationSeconds, htmlSnippet = "") {
+  if (durationSeconds != null && durationSeconds <= SHORT_MAX_SECONDS) {
+    return true;
+  }
+
+  return htmlSnippet.includes('"isShort":true');
+}
+
+async function excludeShorts(videos) {
+  const kept = [];
+
+  for (const video of videos) {
+    try {
+      const response = await fetch(
+        `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`,
+        { headers: { "User-Agent": "Mozilla/5.0 (compatible; VideoLounge/1.0)" } },
+      );
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const html = await response.text();
+      const durationMatch = html.match(/"lengthSeconds":"(\d+)"/);
+      const durationSeconds = durationMatch ? Number(durationMatch[1]) : null;
+
+      if (isShortVideo(durationSeconds, html)) {
+        continue;
+      }
+
+      kept.push({
+        ...video,
+        durationSeconds,
+      });
+    } catch {
+      // Skip entries we cannot classify.
+    }
+  }
+
+  return kept;
+}
+
 exports.handler = async (event) => {
   const channelId = event.queryStringParameters?.channelId;
 
@@ -44,7 +87,8 @@ exports.handler = async (event) => {
     }
 
     const xml = await response.text();
-    const videos = parseFeed(xml);
+    const feedVideos = parseFeed(xml);
+    const videos = await excludeShorts(feedVideos);
 
     return {
       statusCode: 200,

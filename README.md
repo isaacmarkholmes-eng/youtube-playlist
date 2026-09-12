@@ -79,7 +79,7 @@ Configured in `channels.js`:
 
 How it works:
 
-1. **On each visit** (when deployed to Netlify), the page checks YouTube RSS for new uploads.
+1. **On each visit** (when deployed to Netlify), the page checks YouTube RSS for new uploads (Shorts are excluded).
 2. **New videos are saved** in your browser's `localStorage`, so the list grows over time.
 3. **`dynamic-videos.js`** provides a bundled starter set and can be refreshed manually.
 

@@ -7,4 +7,10 @@ window.DYNAMIC_CHANNELS = [
     handle: "sportsnet",
     tags: ["Sports", "Hockey", "Baseball", "Canada"],
   },
+  {
+    channelId: "UCY1kMZp36IQSyNx_9h4mpCg",
+    channel: "Mark Rober",
+    handle: "MarkRober",
+    tags: ["Science", "Engineering", "DIY"],
+  },
 ];

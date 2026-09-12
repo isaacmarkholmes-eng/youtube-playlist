@@ -16,6 +16,7 @@ const tagFiltersEl = document.getElementById("tag-filters");
 const dynamicStatusEl = document.getElementById("dynamic-status");
 
 const DYNAMIC_CACHE_KEY = "video-lounge-dynamic-cache";
+const SHORT_MAX_SECONDS = window.SHORT_MAX_DURATION_SECONDS || 60;
 
 let videos = [];
 let staticVideos = [];
@@ -33,12 +34,26 @@ function shuffle(list) {
   return copy;
 }
 
+function isShortVideo(entry) {
+  if (entry?.durationSeconds != null && entry.durationSeconds <= SHORT_MAX_SECONDS) {
+    return true;
+  }
+
+  const title = (entry?.title || "").toLowerCase();
+  return title.includes("#shorts");
+}
+
 function normalizeVideo(entry) {
+  if (isShortVideo(entry)) {
+    return null;
+  }
+
   return {
     id: entry.id,
     title: entry.title || entry.id,
     channel: entry.channel || "Unknown",
     tags: Array.isArray(entry.tags) ? entry.tags : [],
+    durationSeconds: entry.durationSeconds ?? null,
   };
 }
 
@@ -310,7 +325,7 @@ function loadStaticVideos() {
 function loadDynamicCache() {
   try {
     const cached = JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY) || "[]");
-    return Array.isArray(cached) ? cached.map(normalizeVideo) : [];
+    return Array.isArray(cached) ? cached.map(normalizeVideo).filter(Boolean) : [];
   } catch {
     return [];
   }
@@ -326,7 +341,11 @@ function mergeVideoLists(...lists) {
     if (!entry || !entry.id) {
       return;
     }
-    merged.set(entry.id, normalizeVideo(entry));
+    const normalized = normalizeVideo(entry);
+    if (!normalized) {
+      return;
+    }
+    merged.set(entry.id, normalized);
   });
   return [...merged.values()];
 }
@@ -335,7 +354,9 @@ function getBundledDynamicVideos() {
   if (!Array.isArray(window.DYNAMIC_VIDEO_LIST)) {
     return [];
   }
-  return window.DYNAMIC_VIDEO_LIST.filter((entry) => entry && entry.id).map(normalizeVideo);
+  return window.DYNAMIC_VIDEO_LIST.filter((entry) => entry && entry.id)
+    .map(normalizeVideo)
+    .filter(Boolean);
 }
 
 function setDynamicStatus(message) {
@@ -386,14 +407,17 @@ async function fetchChannelFeed(channel) {
     throw new Error("Feed response did not include videos.");
   }
 
-  return payload.videos.map((video) =>
-    normalizeVideo({
-      id: video.id,
-      title: video.title,
-      channel: channel.channel,
-      tags: channel.tags,
-    }),
-  );
+  return payload.videos
+    .map((video) =>
+      normalizeVideo({
+        id: video.id,
+        title: video.title,
+        channel: channel.channel,
+        tags: channel.tags,
+        durationSeconds: video.durationSeconds ?? null,
+      }),
+    )
+    .filter(Boolean);
 }
 
 async function refreshDynamicChannels() {
@@ -440,7 +464,8 @@ async function init() {
   try {
     staticVideos = loadStaticVideos()
       .filter((entry) => entry && entry.id)
-      .map(normalizeVideo);
+      .map(normalizeVideo)
+      .filter(Boolean);
     rebuildVideoLibrary();
 
     if (!videos.length) {

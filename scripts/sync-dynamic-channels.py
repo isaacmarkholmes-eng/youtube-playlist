@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CHANNELS_JS = ROOT / "channels.js"
 OUT_JS = ROOT / "dynamic-videos.js"
 RECENT_UPLOADS = 50
+SHORT_MAX_SECONDS = 60
 
 
 def load_channels_config() -> list[dict]:
@@ -53,7 +54,35 @@ def fetch_rss(channel_id: str) -> list[dict]:
         if video_id is None or title is None:
             continue
         videos.append({"id": video_id.text, "title": title.text})
-    return videos
+    return filter_out_shorts(videos)
+
+
+def is_long_form_video(video_id: str) -> bool:
+    proc = subprocess.run(
+        [
+            "python",
+            "-m",
+            "yt_dlp",
+            "--match-filter",
+            f"duration > {SHORT_MAX_SECONDS}",
+            "--print",
+            "id",
+            f"https://www.youtube.com/watch?v={video_id}",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    return proc.returncode == 0 and proc.stdout.strip() == video_id
+
+
+def filter_out_shorts(videos: list[dict]) -> list[dict]:
+    kept = []
+    for video in videos:
+        if is_long_form_video(video["id"]):
+            kept.append(video)
+    return kept
 
 
 def fetch_recent_uploads(handle: str, limit: int) -> list[dict]:
@@ -81,7 +110,7 @@ def fetch_recent_uploads(handle: str, limit: int) -> list[dict]:
         if vid == "NA":
             continue
         videos.append({"id": vid, "title": title})
-    return videos
+    return filter_out_shorts(videos)
 
 
 def js_string(value: str) -> str:
