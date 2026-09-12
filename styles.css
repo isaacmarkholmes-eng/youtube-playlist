@@ -160,25 +160,51 @@ button:active {
 }
 
 .queue {
-  margin: 0;
-  padding-left: 1.25rem;
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.85rem;
+}
+
+.queue-item {
+  display: flex;
+  flex-direction: column;
   gap: 0.45rem;
-}
-
-.queue li {
-  color: var(--muted);
-  cursor: pointer;
-  padding: 0.15rem 0;
-}
-
-.queue li:hover,
-.queue li.active {
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-2);
   color: var(--text);
+  text-align: left;
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
-.queue li.active {
-  font-weight: 600;
+.queue-item:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.queue-item img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #000;
+}
+
+.queue-item-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  padding: 0 0.55rem 0.65rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.queue-item:hover .queue-item-title {
+  color: var(--text);
 }
 
 .error {

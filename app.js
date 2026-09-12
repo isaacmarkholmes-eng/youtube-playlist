@@ -35,15 +35,39 @@ function embedUrl(videoId) {
   return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params}`;
 }
 
+function thumbnailUrl(videoId) {
+  return `https://img.youtube.com/vi/${encodeURIComponent(videoId)}/mqdefault.jpg`;
+}
+
+function getUpNext() {
+  const upcoming = [];
+  for (let offset = 1; offset < shuffled.length; offset += 1) {
+    const index = (currentIndex + offset) % shuffled.length;
+    upcoming.push({ video: shuffled[index], index });
+  }
+  return upcoming;
+}
+
 function renderQueue() {
   queueEl.innerHTML = "";
 
-  shuffled.forEach((video, index) => {
-    const item = document.createElement("li");
-    item.textContent = video.title || video.id;
-    if (index === currentIndex) {
-      item.classList.add("active");
-    }
+  getUpNext().forEach(({ video, index }) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "queue-item";
+    item.title = video.title || video.id;
+
+    const img = document.createElement("img");
+    img.src = thumbnailUrl(video.id);
+    img.alt = "";
+    img.loading = "lazy";
+    img.decoding = "async";
+
+    const title = document.createElement("span");
+    title.className = "queue-item-title";
+    title.textContent = video.title || video.id;
+
+    item.append(img, title);
     item.addEventListener("click", () => playAt(index));
     queueEl.appendChild(item);
   });
@@ -53,7 +77,7 @@ function playVideo(video, index) {
   currentIndex = index;
   player.src = embedUrl(video.id);
   titleEl.textContent = video.title || "Untitled video";
-  metaEl.textContent = `${index + 1} of ${shuffled.length}`;
+  metaEl.textContent = `${index + 1} of ${shuffled.length} in shuffle`;
   renderQueue();
 }
 
@@ -82,7 +106,7 @@ function playNext() {
 
 function reshuffleAll() {
   shuffled = shuffle(videos);
-  playAt(0);
+  playAt(Math.floor(Math.random() * shuffled.length));
 }
 
 function loadVideos() {
