@@ -13,8 +13,12 @@ const btnReshuffle = document.getElementById("btn-reshuffle");
 const searchInput = document.getElementById("search-input");
 const channelFilter = document.getElementById("channel-filter");
 const tagFiltersEl = document.getElementById("tag-filters");
+const dynamicStatusEl = document.getElementById("dynamic-status");
+
+const DYNAMIC_CACHE_KEY = "video-lounge-dynamic-cache";
 
 let videos = [];
+let staticVideos = [];
 let shuffled = [];
 let currentIndex = 0;
 const activeTags = new Set();
@@ -296,17 +300,149 @@ function onSearchInput() {
   searchDebounceTimer = setTimeout(onFiltersChanged, 200);
 }
 
-function loadVideos() {
+function loadStaticVideos() {
   if (Array.isArray(window.VIDEO_LIST) && window.VIDEO_LIST.length > 0) {
     return window.VIDEO_LIST;
   }
   throw new Error("No videos found. Check that videos.js defines window.VIDEO_LIST.");
 }
 
-function init() {
+function loadDynamicCache() {
   try {
-    const data = loadVideos();
-    videos = data.filter((entry) => entry && entry.id).map(normalizeVideo);
+    const cached = JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY) || "[]");
+    return Array.isArray(cached) ? cached.map(normalizeVideo) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDynamicCache(dynamicVideos) {
+  localStorage.setItem(DYNAMIC_CACHE_KEY, JSON.stringify(dynamicVideos));
+}
+
+function mergeVideoLists(...lists) {
+  const merged = new Map();
+  lists.flat().forEach((entry) => {
+    if (!entry || !entry.id) {
+      return;
+    }
+    merged.set(entry.id, normalizeVideo(entry));
+  });
+  return [...merged.values()];
+}
+
+function getBundledDynamicVideos() {
+  if (!Array.isArray(window.DYNAMIC_VIDEO_LIST)) {
+    return [];
+  }
+  return window.DYNAMIC_VIDEO_LIST.filter((entry) => entry && entry.id).map(normalizeVideo);
+}
+
+function setDynamicStatus(message) {
+  if (!message) {
+    dynamicStatusEl.hidden = true;
+    dynamicStatusEl.textContent = "";
+    return;
+  }
+  dynamicStatusEl.hidden = false;
+  dynamicStatusEl.textContent = message;
+}
+
+function rebuildVideoLibrary() {
+  videos = mergeVideoLists(
+    staticVideos,
+    getBundledDynamicVideos(),
+    loadDynamicCache(),
+  );
+}
+
+function refreshLibraryUi(preservePlayback = true) {
+  const currentId = shuffled[currentIndex]?.id;
+  populateChannelFilter();
+  populateTagFilters();
+
+  if (!videos.length) {
+    throw new Error("No valid video IDs found in the video list.");
+  }
+
+  if (!preservePlayback || !currentId) {
+    shuffled = shuffle(videos);
+    playAt(0);
+    return;
+  }
+
+  syncShuffleToFilters();
+}
+
+async function fetchChannelFeed(channel) {
+  const endpoint = `/.netlify/functions/youtube-rss?channelId=${encodeURIComponent(channel.channelId)}`;
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    throw new Error(`Feed request failed (${response.status})`);
+  }
+
+  const payload = await response.json();
+  if (!Array.isArray(payload.videos)) {
+    throw new Error("Feed response did not include videos.");
+  }
+
+  return payload.videos.map((video) =>
+    normalizeVideo({
+      id: video.id,
+      title: video.title,
+      channel: channel.channel,
+      tags: channel.tags,
+    }),
+  );
+}
+
+async function refreshDynamicChannels() {
+  const channels = Array.isArray(window.DYNAMIC_CHANNELS) ? window.DYNAMIC_CHANNELS : [];
+  if (!channels.length) {
+    return 0;
+  }
+
+  setDynamicStatus("Checking configured channels for new uploads…");
+
+  const previousCount = videos.length;
+  let fetchedVideos = loadDynamicCache();
+  let feedSuccesses = 0;
+  let feedFailures = 0;
+
+  for (const channel of channels) {
+    try {
+      const latest = await fetchChannelFeed(channel);
+      fetchedVideos = mergeVideoLists(fetchedVideos, latest);
+      feedSuccesses += 1;
+    } catch (error) {
+      feedFailures += 1;
+      console.warn(`Could not refresh ${channel.channel}:`, error);
+    }
+  }
+
+  saveDynamicCache(fetchedVideos);
+  rebuildVideoLibrary();
+
+  const added = videos.length - previousCount;
+  if (added > 0) {
+    setDynamicStatus(`Added ${added} new video${added === 1 ? "" : "s"} from auto-updating channels.`);
+  } else if (feedSuccesses === 0 && feedFailures > 0) {
+    setDynamicStatus("Auto-update needs Netlify hosting. Using bundled Sportsnet videos for now.");
+  } else {
+    setDynamicStatus("Channel feeds checked. No new uploads since your last visit.");
+  }
+
+  refreshLibraryUi(true);
+  return added;
+}
+
+async function init() {
+  try {
+    staticVideos = loadStaticVideos()
+      .filter((entry) => entry && entry.id)
+      .map(normalizeVideo);
+    rebuildVideoLibrary();
+
     if (!videos.length) {
       throw new Error("No valid video IDs found in the video list.");
     }
@@ -315,6 +451,8 @@ function init() {
     populateTagFilters();
     shuffled = shuffle(videos);
     playAt(0);
+
+    await refreshDynamicChannels();
   } catch (error) {
     titleEl.textContent = "Could not load videos";
     metaEl.textContent = "";

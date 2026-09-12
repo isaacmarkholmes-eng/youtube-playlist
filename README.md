@@ -62,6 +62,41 @@ Upload these files to any static host:
 2. Settings → Pages → deploy from branch.
 3. Choose `main` and root `/`.
 
+## Auto-updating channels (Sportsnet)
+
+Some channels can refresh automatically when new videos are uploaded.
+
+Configured in `channels.js`:
+
+```javascript
+{
+  channelId: "UCVhibwHk4WKw4leUt6JfRLg",
+  channel: "Sportsnet",
+  handle: "sportsnet",
+  tags: ["Sports", "Hockey", "Baseball", "Canada"],
+},
+```
+
+How it works:
+
+1. **On each visit** (when deployed to Netlify), the page checks YouTube RSS for new uploads.
+2. **New videos are saved** in your browser's `localStorage`, so the list grows over time.
+3. **`dynamic-videos.js`** provides a bundled starter set and can be refreshed manually.
+
+### Deploy for live auto-update
+
+Upload the site to **Netlify** (free tier is fine). The included serverless function at `netlify/functions/youtube-rss.js` fetches YouTube RSS server-side.
+
+Pure static hosting without functions cannot call YouTube directly from the browser because of CORS limits.
+
+### Manual refresh (local or cron)
+
+```bash
+python scripts/sync-dynamic-channels.py
+```
+
+This updates `dynamic-videos.js` with the latest RSS entries plus the 50 most recent uploads from each configured channel.
+
 ## Browse, search, and filters
 
 - **Search** matches title, channel, and tags.

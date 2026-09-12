@@ -214,10 +214,15 @@ button:active {
   color: var(--text);
 }
 
-.results-count {
+.results-count,
+.dynamic-status {
   margin: 0 0 0.85rem;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.dynamic-status {
+  color: #9fd4ff;
 }
 
 .video-tags,
