@@ -11,7 +11,7 @@ const btnRandom = document.getElementById("btn-random");
 const btnNext = document.getElementById("btn-next");
 const btnReshuffle = document.getElementById("btn-reshuffle");
 const searchInput = document.getElementById("search-input");
-const channelFilter = document.getElementById("channel-filter");
+const channelFiltersEl = document.getElementById("channel-filters");
 const tagFiltersEl = document.getElementById("tag-filters");
 const dynamicStatusEl = document.getElementById("dynamic-status");
 
@@ -24,6 +24,7 @@ let shuffled = [];
 let currentIndex = 0;
 const activeTags = new Set();
 let searchDebounceTimer = null;
+let selectedChannel = "all";
 
 function shuffle(list) {
   const copy = [...list];
@@ -67,17 +68,53 @@ function embedUrl(videoId) {
     autoplay: "1",
     rel: "0",
     modestbranding: "1",
+    iv_load_policy: "3",
+    playsinline: "1",
   });
-  return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params}`;
+  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${params}`;
 }
 
 function thumbnailUrl(videoId) {
   return `https://img.youtube.com/vi/${encodeURIComponent(videoId)}/mqdefault.jpg`;
 }
 
+function channelHue(channelName) {
+  return [...channelName].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 360;
+}
+
+function getChannelIconUrl(channelName) {
+  return window.CHANNEL_ICONS?.[channelName] || null;
+}
+
+function createChannelIcon(channelName, { small = false } = {}) {
+  const icon = document.createElement("span");
+  icon.className = small ? "channel-icon channel-icon-sm" : "channel-icon";
+  const iconUrl = getChannelIconUrl(channelName);
+
+  if (iconUrl) {
+    const img = document.createElement("img");
+    img.src = iconUrl;
+    img.alt = "";
+    img.loading = "lazy";
+    img.decoding = "async";
+    icon.appendChild(img);
+  } else {
+    icon.classList.add("channel-icon-fallback");
+    icon.style.backgroundColor = `hsl(${channelHue(channelName)}, 45%, 35%)`;
+    icon.textContent = channelName
+      .split(/\s+/)
+      .map((word) => word[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  }
+
+  return icon;
+}
+
 function getFilteredVideos() {
   const query = searchInput.value.trim().toLowerCase();
-  const channel = channelFilter.value;
+  const channel = selectedChannel;
 
   return videos.filter((video) => {
     if (channel !== "all" && video.channel !== channel) {
@@ -108,19 +145,47 @@ function getUniqueTags() {
 }
 
 function populateChannelFilter() {
-  const selected = channelFilter.value;
-  channelFilter.innerHTML = '<option value="all">All channels</option>';
+  channelFiltersEl.innerHTML = "";
+
+  const allButton = document.createElement("button");
+  allButton.type = "button";
+  allButton.className = "channel-filter-btn";
+  allButton.dataset.channel = "all";
+  allButton.title = "All channels";
+  allButton.setAttribute("aria-pressed", selectedChannel === "all" ? "true" : "false");
+  if (selectedChannel === "all") {
+    allButton.classList.add("active");
+  }
+
+  const allIcon = document.createElement("span");
+  allIcon.className = "channel-icon channel-icon-all";
+  allIcon.textContent = "All";
+  allButton.appendChild(allIcon);
+  allButton.addEventListener("click", () => {
+    selectedChannel = "all";
+    populateChannelFilter();
+    onFiltersChanged();
+  });
+  channelFiltersEl.appendChild(allButton);
 
   getUniqueChannels().forEach((channel) => {
-    const option = document.createElement("option");
-    option.value = channel;
-    option.textContent = channel;
-    channelFilter.appendChild(option);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "channel-filter-btn";
+    button.dataset.channel = channel;
+    button.title = channel;
+    button.setAttribute("aria-pressed", selectedChannel === channel ? "true" : "false");
+    if (selectedChannel === channel) {
+      button.classList.add("active");
+    }
+    button.appendChild(createChannelIcon(channel));
+    button.addEventListener("click", () => {
+      selectedChannel = channel;
+      populateChannelFilter();
+      onFiltersChanged();
+    });
+    channelFiltersEl.appendChild(button);
   });
-
-  if ([...channelFilter.options].some((option) => option.value === selected)) {
-    channelFilter.value = selected;
-  }
 }
 
 function populateTagFilters() {
@@ -148,9 +213,21 @@ function populateTagFilters() {
   });
 }
 
+function getBrowseVideos() {
+  const filtered = getFilteredVideos();
+  const filteredIds = new Set(filtered.map((video) => video.id));
+  const fromShuffle = shuffled.filter((video) => filteredIds.has(video.id));
+
+  if (fromShuffle.length === filtered.length && fromShuffle.length > 0) {
+    return fromShuffle;
+  }
+
+  return shuffle(filtered);
+}
+
 function updateResultsCount(filteredCount) {
   const total = videos.length;
-  const channel = channelFilter.value;
+  const channel = selectedChannel;
   const query = searchInput.value.trim();
   const tagCount = activeTags.size;
 
@@ -165,13 +242,14 @@ function updateResultsCount(filteredCount) {
 function renderBrowseGrid() {
   queueEl.innerHTML = "";
   const filtered = getFilteredVideos();
+  const browseVideos = getBrowseVideos();
   const currentId = shuffled[currentIndex]?.id;
 
   updateResultsCount(filtered.length);
-  emptyStateEl.hidden = filtered.length > 0;
-  queueEl.hidden = filtered.length === 0;
+  emptyStateEl.hidden = browseVideos.length > 0;
+  queueEl.hidden = browseVideos.length === 0;
 
-  filtered.forEach((video) => {
+  browseVideos.forEach((video) => {
     const shuffledIndex = shuffled.findIndex((entry) => entry.id === video.id);
     const item = document.createElement("button");
     item.type = "button";
@@ -192,11 +270,14 @@ function renderBrowseGrid() {
     title.className = "queue-item-title";
     title.textContent = video.title;
 
-    const channel = document.createElement("span");
-    channel.className = "queue-item-channel";
-    channel.textContent = video.channel;
+    const channelRow = document.createElement("span");
+    channelRow.className = "queue-item-channel";
+    channelRow.append(createChannelIcon(video.channel, { small: true }));
+    const channelName = document.createElement("span");
+    channelName.textContent = video.channel;
+    channelRow.appendChild(channelName);
 
-    item.append(img, title, channel);
+    item.append(img, title, channelRow);
     item.addEventListener("click", () => {
       if (shuffledIndex >= 0) {
         playAt(shuffledIndex);
@@ -222,7 +303,11 @@ function renderCurrentTags(video) {
 
 function updateNowPlaying(video, index) {
   titleEl.textContent = video.title;
-  metaEl.textContent = `${video.channel} · ${index + 1} of ${shuffled.length} in shuffle`;
+  metaEl.innerHTML = "";
+  metaEl.append(createChannelIcon(video.channel, { small: true }));
+  const metaText = document.createElement("span");
+  metaText.textContent = `${video.channel} · ${index + 1} of ${shuffled.length} in shuffle`;
+  metaEl.appendChild(metaText);
   renderCurrentTags(video);
   renderBrowseGrid();
 }
@@ -265,7 +350,7 @@ function reshuffleFiltered() {
     currentIndex = 0;
     player.removeAttribute("src");
     titleEl.textContent = "No matches";
-    metaEl.textContent = "";
+    metaEl.innerHTML = "";
     videoTagsEl.innerHTML = "";
     renderBrowseGrid();
     return;
@@ -287,7 +372,7 @@ function syncShuffleToFilters() {
     currentIndex = 0;
     player.removeAttribute("src");
     titleEl.textContent = "No matches";
-    metaEl.textContent = "";
+    metaEl.innerHTML = "";
     videoTagsEl.innerHTML = "";
     renderBrowseGrid();
     return;
@@ -480,7 +565,7 @@ async function init() {
     await refreshDynamicChannels();
   } catch (error) {
     titleEl.textContent = "Could not load videos";
-    metaEl.textContent = "";
+    metaEl.innerHTML = "";
     showError(error.message);
   }
 }
@@ -489,6 +574,5 @@ btnRandom.addEventListener("click", playRandom);
 btnNext.addEventListener("click", playNext);
 btnReshuffle.addEventListener("click", reshuffleFiltered);
 searchInput.addEventListener("input", onSearchInput);
-channelFilter.addEventListener("change", onFiltersChanged);
 
 init();

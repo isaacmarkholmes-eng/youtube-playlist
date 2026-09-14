@@ -18,16 +18,19 @@
         <iframe
           id="player"
           title="YouTube player"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
           allowfullscreen
           referrerpolicy="strict-origin-when-cross-origin"
+          sandbox="allow-scripts allow-same-origin allow-presentation"
         ></iframe>
+        <div class="player-shield player-shield-top" aria-hidden="true"></div>
+        <div class="player-shield player-shield-logo" aria-hidden="true"></div>
       </div>
 
       <div class="now-playing">
         <p class="label">Now playing</p>
         <h2 id="video-title">Loading…</h2>
-        <p id="video-meta" class="meta"></p>
+        <div id="video-meta" class="meta now-playing-meta"></div>
         <p id="video-tags" class="video-tags"></p>
       </div>
 
@@ -48,14 +51,9 @@
           <span class="sr-only">Search videos</span>
           <input id="search-input" type="search" placeholder="Search title, channel, or tags…" autocomplete="off">
         </label>
-
-        <label class="channel-field">
-          <span>Channel</span>
-          <select id="channel-filter">
-            <option value="all">All channels</option>
-          </select>
-        </label>
       </div>
+
+      <div id="channel-filters" class="channel-filters" aria-label="Filter by channel"></div>
 
       <div id="tag-filters" class="tag-filters" aria-label="Filter by tag"></div>
       <p id="dynamic-status" class="dynamic-status" hidden></p>
@@ -71,6 +69,7 @@
   <script src="config.js"></script>
   <script src="videos.js"></script>
   <script src="channels.js"></script>
+  <script src="channel-icons.js"></script>
   <script src="dynamic-videos.js"></script>
   <script src="app.js"></script>
 </body>

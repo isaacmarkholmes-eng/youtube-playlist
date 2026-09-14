@@ -13,4 +13,10 @@ window.DYNAMIC_CHANNELS = [
     handle: "MarkRober",
     tags: ["Science", "Engineering", "DIY"],
   },
+  {
+    channelId: "UCSz8X-JAmenxLH-uXlgVaCg",
+    channel: "Odd Animal Specimens",
+    handle: "OddAnimalSpecimens",
+    tags: ["Nature", "Animals", "Science"],
+  },
 ];
