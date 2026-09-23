@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="origin">
   <title>Video Lounge</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -20,8 +21,6 @@
           title="YouTube player"
           allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
           allowfullscreen
-          referrerpolicy="strict-origin-when-cross-origin"
-          sandbox="allow-scripts allow-same-origin allow-presentation"
         ></iframe>
         <div class="player-shield player-shield-top" aria-hidden="true"></div>
         <div class="player-shield player-shield-logo" aria-hidden="true"></div>
@@ -78,6 +77,16 @@
 
   <p id="error" class="error" hidden></p>
 
+  <script>
+    window.onerror = function (message) {
+      var el = document.getElementById("error");
+      if (!el) {
+        return;
+      }
+      el.hidden = false;
+      el.textContent = message;
+    };
+  </script>
   <script src="config.js"></script>
   <script src="videos.js"></script>
   <script src="channels.js"></script>

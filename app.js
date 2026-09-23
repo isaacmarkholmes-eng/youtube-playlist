@@ -56,7 +56,7 @@ function loadPreferences() {
     const prefs = JSON.parse(localStorage.getItem(PREFERENCES_KEY) || "{}");
     smartShuffleEnabled = prefs.smartShuffleEnabled !== false;
     hideWatched = Boolean(prefs.hideWatched);
-  } catch {
+  } catch (error) {
     smartShuffleEnabled = true;
     hideWatched = false;
   }
@@ -80,7 +80,7 @@ function loadWatchHistory() {
   try {
     const history = JSON.parse(localStorage.getItem(WATCH_HISTORY_KEY) || "[]");
     return Array.isArray(history) ? history : [];
-  } catch {
+  } catch (error) {
     return [];
   }
 }
@@ -95,7 +95,7 @@ function saveWatchHistory(history) {
 }
 
 function recordWatch(video) {
-  if (!video?.id) {
+  if (!video || !video.id) {
     return;
   }
 
@@ -210,11 +210,15 @@ function isVideoWatched(videoId) {
 }
 
 function isShortVideo(entry) {
-  if (entry?.durationSeconds != null && entry.durationSeconds <= SHORT_MAX_SECONDS) {
+  if (!entry) {
+    return false;
+  }
+
+  if (entry.durationSeconds != null && entry.durationSeconds <= SHORT_MAX_SECONDS) {
     return true;
   }
 
-  const title = (entry?.title || "").toLowerCase();
+  const title = (entry.title || "").toLowerCase();
   return title.includes("#shorts");
 }
 
@@ -228,7 +232,7 @@ function normalizeVideo(entry) {
     title: entry.title || entry.id,
     channel: entry.channel || "Unknown",
     tags: Array.isArray(entry.tags) ? entry.tags : [],
-    durationSeconds: entry.durationSeconds ?? null,
+    durationSeconds: entry.durationSeconds != null ? entry.durationSeconds : null,
   };
 }
 
@@ -243,19 +247,23 @@ function isTizenTv() {
 }
 
 function configurePlayerForPlatform() {
-  if (!isTizenTv()) {
+  if (isTizenTv()) {
+    player.removeAttribute("sandbox");
+    player.setAttribute(
+      "allow",
+      "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+    );
+
+    if (subtitleEl) {
+      subtitleEl.textContent = "Samsung TV";
+    }
     return;
   }
 
-  player.removeAttribute("sandbox");
   player.setAttribute(
-    "allow",
-    "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+    "sandbox",
+    "allow-scripts allow-same-origin allow-presentation"
   );
-
-  if (subtitleEl) {
-    subtitleEl.textContent = "Samsung TV — D-pad to browse; redeploy site after updates";
-  }
 }
 
 function embedUrl(videoId) {
@@ -288,7 +296,10 @@ function channelHue(channelName) {
 }
 
 function getChannelIconUrl(channelName) {
-  return window.CHANNEL_ICONS?.[channelName] || null;
+  if (!window.CHANNEL_ICONS) {
+    return null;
+  }
+  return window.CHANNEL_ICONS[channelName] || null;
 }
 
 function createChannelIcon(channelName, { small = false } = {}) {
@@ -448,7 +459,7 @@ function renderBrowseGrid() {
   queueEl.innerHTML = "";
   const filtered = getFilteredVideos();
   const browseVideos = getBrowseVideos();
-  const currentId = shuffled[currentIndex]?.id;
+  const currentId = shuffled[currentIndex] && shuffled[currentIndex].id;
 
   updateResultsCount(filtered.length);
   emptyStateEl.hidden = browseVideos.length > 0;
@@ -610,7 +621,7 @@ function reshuffleFiltered() {
 
 function syncShuffleToFilters() {
   const filtered = getFilteredVideos();
-  const currentId = shuffled[currentIndex]?.id;
+  const currentId = shuffled[currentIndex] && shuffled[currentIndex].id;
   const hasActivePlayer = Boolean(player.getAttribute("src"));
 
   populateTagFilters();
@@ -680,7 +691,7 @@ function loadDynamicCache() {
   try {
     const cached = JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY) || "[]");
     return Array.isArray(cached) ? cached.map(normalizeVideo).filter(Boolean) : [];
-  } catch {
+  } catch (error) {
     return [];
   }
 }
@@ -689,19 +700,21 @@ function saveDynamicCache(dynamicVideos) {
   localStorage.setItem(DYNAMIC_CACHE_KEY, JSON.stringify(dynamicVideos));
 }
 
-function mergeVideoLists(...lists) {
+function mergeVideoLists() {
   const merged = new Map();
-  lists.flat().forEach((entry) => {
-    if (!entry || !entry.id) {
-      return;
-    }
-    const normalized = normalizeVideo(entry);
-    if (!normalized) {
-      return;
-    }
-    merged.set(entry.id, normalized);
+  Array.prototype.forEach.call(arguments, function (list) {
+    (list || []).forEach((entry) => {
+      if (!entry || !entry.id) {
+        return;
+      }
+      const normalized = normalizeVideo(entry);
+      if (!normalized) {
+        return;
+      }
+      merged.set(entry.id, normalized);
+    });
   });
-  return [...merged.values()];
+  return Array.from(merged.values());
 }
 
 function getBundledDynamicVideos() {
@@ -732,7 +745,7 @@ function rebuildVideoLibrary() {
 }
 
 function refreshLibraryUi(preservePlayback = true) {
-  const currentId = shuffled[currentIndex]?.id;
+  const currentId = shuffled[currentIndex] && shuffled[currentIndex].id;
   populateChannelFilter();
   populateTagFilters();
 
@@ -768,7 +781,7 @@ async function fetchChannelFeed(channel) {
         title: video.title,
         channel: channel.channel,
         tags: channel.tags,
-        durationSeconds: video.durationSeconds ?? null,
+        durationSeconds: video.durationSeconds != null ? video.durationSeconds : null,
       }),
     )
     .filter(Boolean);
