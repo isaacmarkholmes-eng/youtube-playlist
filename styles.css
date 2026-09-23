@@ -108,6 +108,19 @@ body {
   height: 3rem;
 }
 
+.player-shield-full {
+  display: none;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+}
+
+.tv-remote .player-shield-full {
+  display: block;
+}
+
 .now-playing {
   padding: 1rem 0.25rem 0.5rem;
 }
@@ -184,15 +197,34 @@ button:active {
   transform: scale(0.98);
 }
 
+#btn-pause,
 #btn-random,
 #btn-next {
   background: var(--accent);
   color: white;
 }
 
+#btn-pause:hover,
 #btn-random:hover,
 #btn-next:hover {
   background: var(--accent-hover);
+}
+
+button:focus,
+input:focus {
+  outline: 3px solid #ffe14a;
+  outline-offset: 3px;
+}
+
+.tv-remote .controls button {
+  font-size: 1.15rem;
+  padding: 1rem 1.35rem;
+}
+
+.queue-item:focus {
+  border-color: var(--accent);
+  outline: 3px solid #ffe14a;
+  outline-offset: 2px;
 }
 
 .link-button {

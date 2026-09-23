@@ -7,6 +7,7 @@ const errorEl = document.getElementById("error");
 const emptyStateEl = document.getElementById("empty-state");
 const resultsCountEl = document.getElementById("results-count");
 
+const btnPause = document.getElementById("btn-pause");
 const btnRandom = document.getElementById("btn-random");
 const btnNext = document.getElementById("btn-next");
 const btnReshuffle = document.getElementById("btn-reshuffle");
@@ -41,6 +42,8 @@ let selectedChannel = "all";
 let smartShuffleEnabled = true;
 let hideWatched = false;
 let watchedIdSet = new Set();
+let playbackPaused = false;
+let savedFocusKey = "";
 
 function shuffle(list) {
   const copy = [...list];
@@ -200,6 +203,11 @@ function getShuffleModeLabel() {
 }
 
 function updateSubtitle() {
+  if (isTvRemote()) {
+    subtitleEl.textContent = "Arrows move, Enter selects, Pause pauses the video";
+    return;
+  }
+
   subtitleEl.textContent = smartShuffleEnabled
     ? "Smart picks from your list"
     : "Random picks from your list";
@@ -246,17 +254,23 @@ function isTizenTv() {
   return /Tizen|SMART-TV|SamsungBrowser/i.test(ua);
 }
 
-function configurePlayerForPlatform() {
+function isTvRemote() {
   if (isTizenTv()) {
+    return true;
+  }
+  return (window.location.search || "").indexOf("tv=1") !== -1;
+}
+
+function configurePlayerForPlatform() {
+  player.tabIndex = -1;
+
+  if (isTvRemote()) {
+    document.body.classList.add("tv-remote");
     player.removeAttribute("sandbox");
     player.setAttribute(
       "allow",
       "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
     );
-
-    if (subtitleEl) {
-      subtitleEl.textContent = "Samsung TV";
-    }
     return;
   }
 
@@ -274,6 +288,7 @@ function embedUrl(videoId) {
     iv_load_policy: "3",
     playsinline: "1",
     fs: "1",
+    enablejsapi: "1",
   });
 
   if (window.location.origin && window.location.origin !== "null") {
@@ -361,6 +376,7 @@ function getUniqueTags() {
 }
 
 function populateChannelFilter() {
+  captureFocus();
   channelFiltersEl.innerHTML = "";
 
   const allButton = document.createElement("button");
@@ -402,9 +418,11 @@ function populateChannelFilter() {
     });
     channelFiltersEl.appendChild(button);
   });
+  restoreFocus();
 }
 
 function populateTagFilters() {
+  captureFocus();
   tagFiltersEl.innerHTML = "";
 
   getUniqueTags().forEach((tag) => {
@@ -427,6 +445,7 @@ function populateTagFilters() {
     });
     tagFiltersEl.appendChild(button);
   });
+  restoreFocus();
 }
 
 function getBrowseVideos() {
@@ -456,6 +475,7 @@ function updateResultsCount(filteredCount) {
 }
 
 function renderBrowseGrid() {
+  captureFocus();
   queueEl.innerHTML = "";
   const filtered = getFilteredVideos();
   const browseVideos = getBrowseVideos();
@@ -471,6 +491,7 @@ function renderBrowseGrid() {
     item.type = "button";
     item.className = "queue-item";
     item.title = video.title;
+    item.dataset.videoId = video.id;
 
     if (video.id === currentId) {
       item.classList.add("active");
@@ -526,6 +547,7 @@ function renderBrowseGrid() {
     });
     queueEl.appendChild(item);
   });
+  restoreFocus();
 }
 
 function renderCurrentTags(video) {
@@ -554,6 +576,7 @@ function playVideo(video, index, reloadPlayer = true) {
   if (reloadPlayer) {
     player.src = embedUrl(video.id);
     recordWatch(video);
+    setPaused(false);
   }
   updateNowPlaying(video, index);
 }
@@ -827,6 +850,271 @@ async function refreshDynamicChannels() {
   return added;
 }
 
+function focusKey(element) {
+  if (!element || element === document.body || element === document.documentElement) {
+    return "";
+  }
+  if (element.id) {
+    return "id:" + element.id;
+  }
+  if (element.dataset && element.dataset.videoId) {
+    return "video:" + element.dataset.videoId;
+  }
+  if (element.dataset && element.dataset.channel) {
+    return "channel:" + element.dataset.channel;
+  }
+  if (element.dataset && element.dataset.tag) {
+    return "tag:" + element.dataset.tag;
+  }
+  return "";
+}
+
+function captureFocus() {
+  const key = focusKey(document.activeElement);
+  if (key) {
+    savedFocusKey = key;
+  }
+}
+
+function findFocusTarget(key) {
+  if (!key) {
+    return null;
+  }
+  if (key.indexOf("id:") === 0) {
+    return document.getElementById(key.slice(3));
+  }
+  if (key.indexOf("video:") === 0) {
+    const videoId = key.slice(6);
+    const buttons = queueEl.querySelectorAll("button");
+    for (let index = 0; index < buttons.length; index += 1) {
+      if (buttons[index].dataset.videoId === videoId) {
+        return buttons[index];
+      }
+    }
+    return null;
+  }
+  if (key.indexOf("channel:") === 0) {
+    const channel = key.slice(8);
+    const buttons = channelFiltersEl.querySelectorAll("button");
+    for (let index = 0; index < buttons.length; index += 1) {
+      if (buttons[index].dataset.channel === channel) {
+        return buttons[index];
+      }
+    }
+    return null;
+  }
+  if (key.indexOf("tag:") === 0) {
+    const tag = key.slice(4);
+    const buttons = tagFiltersEl.querySelectorAll("button");
+    for (let index = 0; index < buttons.length; index += 1) {
+      if (buttons[index].dataset.tag === tag) {
+        return buttons[index];
+      }
+    }
+  }
+  return null;
+}
+
+function restoreFocus() {
+  const target = findFocusTarget(savedFocusKey);
+  if (target) {
+    target.focus();
+  }
+}
+
+function focusableElements() {
+  return Array.prototype.filter.call(
+    document.querySelectorAll("button, input, a[href]"),
+    (element) => {
+      if (element.disabled || element.hidden) {
+        return false;
+      }
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    },
+  );
+}
+
+function centerOf(element) {
+  const rect = element.getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
+}
+
+function moveTvFocus(direction) {
+  const items = focusableElements();
+  const current = document.activeElement;
+  const currentInList = items.indexOf(current) !== -1;
+
+  if (!currentInList) {
+    focusTvStart();
+    return;
+  }
+
+  const origin = centerOf(current);
+  let best = null;
+  let bestScore = Infinity;
+
+  items.forEach((element) => {
+    if (element === current) {
+      return;
+    }
+
+    const point = centerOf(element);
+    const dx = point.x - origin.x;
+    const dy = point.y - origin.y;
+
+    if (direction === "left" && dx >= -8) {
+      return;
+    }
+    if (direction === "right" && dx <= 8) {
+      return;
+    }
+    if (direction === "up" && dy >= -8) {
+      return;
+    }
+    if (direction === "down" && dy <= 8) {
+      return;
+    }
+
+    const primary = direction === "left" || direction === "right" ? Math.abs(dx) : Math.abs(dy);
+    const secondary = direction === "left" || direction === "right" ? Math.abs(dy) : Math.abs(dx);
+    const score = primary + secondary * 3;
+    if (score < bestScore) {
+      bestScore = score;
+      best = element;
+    }
+  });
+
+  if (!best) {
+    return;
+  }
+
+  best.focus();
+  if (best.scrollIntoView) {
+    best.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+}
+
+function focusTvStart() {
+  if (!isTvRemote() || !btnPause) {
+    return;
+  }
+  btnPause.focus();
+}
+
+function sendPlayerCommand(funcName) {
+  if (!player.contentWindow) {
+    return;
+  }
+  player.contentWindow.postMessage(JSON.stringify({
+    event: "command",
+    func: funcName,
+    args: "",
+  }), "*");
+}
+
+function setPaused(paused) {
+  playbackPaused = paused;
+  if (btnPause) {
+    btnPause.textContent = paused ? "Play" : "Pause";
+  }
+}
+
+function togglePlayback() {
+  sendPlayerCommand(playbackPaused ? "playVideo" : "pauseVideo");
+  setPaused(!playbackPaused);
+}
+
+function tvDirection(event) {
+  const key = event.key || "";
+  const code = event.keyCode || event.which;
+  if (key === "ArrowLeft" || code === 37) {
+    return "left";
+  }
+  if (key === "ArrowUp" || code === 38) {
+    return "up";
+  }
+  if (key === "ArrowRight" || code === 39) {
+    return "right";
+  }
+  if (key === "ArrowDown" || code === 40) {
+    return "down";
+  }
+  return "";
+}
+
+function onTvKeyDown(event) {
+  if (!isTvRemote()) {
+    return;
+  }
+
+  const code = event.keyCode || event.which;
+  if (code === 179 || code === 10252) {
+    event.preventDefault();
+    togglePlayback();
+    return;
+  }
+  if (code === 415) {
+    event.preventDefault();
+    sendPlayerCommand("playVideo");
+    setPaused(false);
+    return;
+  }
+  if (code === 19) {
+    event.preventDefault();
+    sendPlayerCommand("pauseVideo");
+    setPaused(true);
+    return;
+  }
+
+  const direction = tvDirection(event);
+  if (!direction) {
+    return;
+  }
+
+  const active = document.activeElement;
+  const typing = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+  if (typing && (direction === "left" || direction === "right")) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  moveTvFocus(direction);
+}
+
+function onPlayerFrameLoad() {
+  if (!isTvRemote()) {
+    return;
+  }
+
+  window.setTimeout(() => {
+    if (document.activeElement === player || document.activeElement === document.body) {
+      restoreFocus();
+    }
+    if (document.activeElement === player || document.activeElement === document.body) {
+      focusTvStart();
+    }
+  }, 50);
+}
+
+function registerTvMediaKeys() {
+  if (!window.tizen || !window.tizen.tvinputdevice || !window.tizen.tvinputdevice.registerKey) {
+    return;
+  }
+
+  ["MediaPlay", "MediaPause", "MediaPlayPause", "MediaStop"].forEach((name) => {
+    try {
+      window.tizen.tvinputdevice.registerKey(name);
+    } catch (error) {
+      // The TV may already own this key.
+    }
+  });
+}
+
 async function init() {
   try {
     configurePlayerForPlatform();
@@ -849,6 +1137,7 @@ async function init() {
     playAt(0);
 
     await refreshDynamicChannels();
+    focusTvStart();
   } catch (error) {
     titleEl.textContent = "Could not load videos";
     metaEl.innerHTML = "";
@@ -858,10 +1147,14 @@ async function init() {
 
 btnRandom.addEventListener("click", playRandom);
 btnNext.addEventListener("click", playNext);
+btnPause.addEventListener("click", togglePlayback);
 btnReshuffle.addEventListener("click", reshuffleFiltered);
 toggleSmartShuffle.addEventListener("change", onPlaybackPreferencesChanged);
 toggleHideWatched.addEventListener("change", onPlaybackPreferencesChanged);
 btnClearHistory.addEventListener("click", onClearWatchHistory);
 searchInput.addEventListener("input", onSearchInput);
+document.addEventListener("keydown", onTvKeyDown, true);
+player.addEventListener("load", onPlayerFrameLoad);
+registerTvMediaKeys();
 
 init();

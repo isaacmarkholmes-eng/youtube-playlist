@@ -19,9 +19,11 @@
         <iframe
           id="player"
           title="YouTube player"
+          tabindex="-1"
           allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
           allowfullscreen
         ></iframe>
+        <div class="player-shield player-shield-full" aria-hidden="true"></div>
         <div class="player-shield player-shield-top" aria-hidden="true"></div>
         <div class="player-shield player-shield-logo" aria-hidden="true"></div>
       </div>
@@ -34,6 +36,7 @@
       </div>
 
       <div class="controls">
+        <button id="btn-pause" type="button">Pause</button>
         <button id="btn-random" type="button">Another random</button>
         <button id="btn-next" type="button">Next in shuffle</button>
       </div>
