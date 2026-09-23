@@ -10,7 +10,7 @@
   <main class="layout">
     <header class="header">
       <h1>Video Lounge</h1>
-      <p class="subtitle">Random picks from your list</p>
+      <p id="subtitle" class="subtitle">Smart picks from your list</p>
     </header>
 
     <section class="player-card">
@@ -37,6 +37,18 @@
       <div class="controls">
         <button id="btn-random" type="button">Another random</button>
         <button id="btn-next" type="button">Next in shuffle</button>
+      </div>
+
+      <div class="playback-prefs" aria-label="Playback preferences">
+        <label class="pref-toggle">
+          <input id="toggle-smart-shuffle" type="checkbox" checked>
+          <span>Smart shuffle</span>
+        </label>
+        <label class="pref-toggle">
+          <input id="toggle-hide-watched" type="checkbox">
+          <span>Hide watched</span>
+        </label>
+        <button id="btn-clear-history" type="button" class="link-button">Clear watch history</button>
       </div>
     </section>
 

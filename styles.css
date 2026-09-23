@@ -127,6 +127,37 @@ body {
   padding-top: 0.5rem;
 }
 
+.playback-prefs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem 1.25rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.pref-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.pref-toggle input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.pref-toggle:has(input:checked) {
+  color: var(--text);
+}
+
 button {
   appearance: none;
   border: 0;
@@ -384,12 +415,46 @@ button:active {
   box-shadow: 0 0 0 1px var(--accent);
 }
 
+.queue-item-watched:not(.active) {
+  opacity: 0.72;
+}
+
+.queue-item-thumb-wrap {
+  position: relative;
+}
+
+.queue-item-watched-badge {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.4rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #d5dbe6;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .queue-item img {
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
   background: #000;
+}
+
+.queue-item-thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(145deg, #1a2230, #0d1117);
+  color: var(--accent);
+  font-size: 2rem;
+  font-weight: 700;
 }
 
 .queue-item-title {

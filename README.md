@@ -104,6 +104,23 @@ This updates `dynamic-videos.js` with the latest RSS entries plus the 50 most re
 - **Tag chips** filter by category (click to toggle).
 - **Another random** and **Reshuffle results** only use the currently filtered videos.
 
+## Smart shuffle and watch history
+
+- **Smart shuffle** (on by default) ranks videos by similarity to your recent watches using shared tags, channel, and title words.
+- **Watch history** is saved in your browser's `localStorage` (up to 250 videos).
+- **Hide watched** removes already-seen videos from the shuffle when possible.
+- **Clear watch history** resets smart shuffle until you watch more videos.
+- Turn off **Smart shuffle** for classic random ordering.
+- Watched videos show a small **Watched** badge in the browse grid.
+
+## Samsung TV home screen app
+
+To install Video Lounge as a **Samsung TV app icon** (free personal sideload), see:
+
+**[tizen/TIZEN-SETUP.md](tizen/TIZEN-SETUP.md)**
+
+That guide covers Tizen Studio, free Samsung certificates, and installing the `.wgt` launcher on your TV.
+
 ## Notes
 
 - Videos must allow embedding on other sites.
