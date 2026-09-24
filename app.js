@@ -19,6 +19,10 @@ const searchInput = document.getElementById("search-input");
 const channelFiltersEl = document.getElementById("channel-filters");
 const tagFiltersEl = document.getElementById("tag-filters");
 const dynamicStatusEl = document.getElementById("dynamic-status");
+const pageControlsEl = document.getElementById("page-controls");
+const pageLabelEl = document.getElementById("page-label");
+const btnPagePrev = document.getElementById("btn-page-prev");
+const btnPageNext = document.getElementById("btn-page-next");
 
 const DYNAMIC_CACHE_KEY = "video-lounge-dynamic-cache";
 const WATCH_HISTORY_KEY = "video-lounge-watch-history";
@@ -44,6 +48,8 @@ let hideWatched = false;
 let watchedIdSet = new Set();
 let playbackPaused = false;
 let savedFocusKey = "";
+let browsePage = 0;
+const TV_PAGE_SIZE = 9;
 
 function shuffle(list) {
   const copy = [...list];
@@ -204,7 +210,7 @@ function getShuffleModeLabel() {
 
 function updateSubtitle() {
   if (isTvRemote()) {
-    subtitleEl.textContent = "Arrows move, Enter selects, Pause pauses the video";
+    subtitleEl.textContent = "Arrows move. Up returns toward the player. Enter selects.";
     return;
   }
 
@@ -474,18 +480,52 @@ function updateResultsCount(filteredCount) {
   resultsCountEl.textContent = `${filteredCount} of ${total} videos match`;
 }
 
+function visibleBrowseVideos(browseVideos) {
+  if (!isTvRemote()) {
+    if (pageControlsEl) {
+      pageControlsEl.hidden = true;
+    }
+    return browseVideos;
+  }
+
+  const pages = Math.max(1, Math.ceil(browseVideos.length / TV_PAGE_SIZE));
+  if (browsePage >= pages) {
+    browsePage = pages - 1;
+  }
+  if (browsePage < 0) {
+    browsePage = 0;
+  }
+
+  if (pageControlsEl) {
+    pageControlsEl.hidden = pages <= 1;
+  }
+  if (pageLabelEl) {
+    pageLabelEl.textContent = "Page " + (browsePage + 1) + " of " + pages;
+  }
+  if (btnPagePrev) {
+    btnPagePrev.disabled = browsePage === 0;
+  }
+  if (btnPageNext) {
+    btnPageNext.disabled = browsePage >= pages - 1;
+  }
+
+  const start = browsePage * TV_PAGE_SIZE;
+  return browseVideos.slice(start, start + TV_PAGE_SIZE);
+}
+
 function renderBrowseGrid() {
   captureFocus();
   queueEl.innerHTML = "";
   const filtered = getFilteredVideos();
   const browseVideos = getBrowseVideos();
+  const pageVideos = visibleBrowseVideos(browseVideos);
   const currentId = shuffled[currentIndex] && shuffled[currentIndex].id;
 
   updateResultsCount(filtered.length);
-  emptyStateEl.hidden = browseVideos.length > 0;
-  queueEl.hidden = browseVideos.length === 0;
+  emptyStateEl.hidden = pageVideos.length > 0;
+  queueEl.hidden = pageVideos.length === 0;
 
-  browseVideos.forEach((video) => {
+  pageVideos.forEach((video) => {
     const shuffledIndex = shuffled.findIndex((entry) => entry.id === video.id);
     const item = document.createElement("button");
     item.type = "button";
@@ -626,6 +666,7 @@ function playNext() {
 }
 
 function reshuffleFiltered() {
+  browsePage = 0;
   const filtered = getFilteredVideos();
   if (!filtered.length) {
     shuffled = [];
@@ -643,6 +684,7 @@ function reshuffleFiltered() {
 }
 
 function syncShuffleToFilters() {
+  browsePage = 0;
   const filtered = getFilteredVideos();
   const currentId = shuffled[currentIndex] && shuffled[currentIndex].id;
   const hasActivePlayer = Boolean(player.getAttribute("src"));
@@ -918,7 +960,61 @@ function findFocusTarget(key) {
 function restoreFocus() {
   const target = findFocusTarget(savedFocusKey);
   if (target) {
-    target.focus();
+    focusElement(target);
+  }
+}
+
+function focusElement(element) {
+  if (!element) {
+    return;
+  }
+  try {
+    element.focus({ preventScroll: true });
+  } catch (error) {
+    element.focus();
+  }
+}
+
+function scrollPageTo(top) {
+  const next = top < 0 ? 0 : top;
+  const scroller = document.scrollingElement || document.documentElement;
+  scroller.scrollTop = next;
+  document.documentElement.scrollTop = next;
+  document.body.scrollTop = next;
+  window.scrollTo(0, next);
+}
+
+function scrollFocusIntoView(element) {
+  const rect = element.getBoundingClientRect();
+  const current = window.pageYOffset
+    || document.documentElement.scrollTop
+    || document.body.scrollTop
+    || 0;
+  const margin = 80;
+  if (rect.top < margin) {
+    scrollPageTo(current + rect.top - margin);
+    return;
+  }
+  if (rect.bottom > window.innerHeight - margin) {
+    scrollPageTo(current + rect.bottom - (window.innerHeight - margin));
+  }
+}
+
+function focusAndScroll(element) {
+  focusElement(element);
+  scrollFocusIntoView(element);
+  window.setTimeout(() => {
+    scrollFocusIntoView(element);
+  }, 0);
+}
+
+function changeBrowsePage(nextPage) {
+  browsePage = nextPage;
+  savedFocusKey = "";
+  renderBrowseGrid();
+  const first = queueEl.querySelector(".queue-item");
+  if (first) {
+    focusAndScroll(first);
   }
 }
 
@@ -989,20 +1085,29 @@ function moveTvFocus(direction) {
   });
 
   if (!best) {
+    if (direction === "down" && btnPageNext && !btnPageNext.disabled && queueEl.contains(current)) {
+      changeBrowsePage(browsePage + 1);
+      return;
+    }
+    if (direction === "up") {
+      scrollPageTo(0);
+      focusTvStart();
+    }
     return;
   }
 
-  best.focus();
-  if (best.scrollIntoView) {
-    best.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }
+  focusAndScroll(best);
 }
 
 function focusTvStart() {
   if (!isTvRemote() || !btnPause) {
     return;
   }
-  btnPause.focus();
+  focusElement(btnPause);
+  scrollPageTo(0);
+  window.setTimeout(() => {
+    scrollPageTo(0);
+  }, 0);
 }
 
 function sendPlayerCommand(funcName) {
@@ -1148,6 +1253,14 @@ async function init() {
 btnRandom.addEventListener("click", playRandom);
 btnNext.addEventListener("click", playNext);
 btnPause.addEventListener("click", togglePlayback);
+btnPagePrev.addEventListener("click", () => {
+  if (browsePage > 0) {
+    changeBrowsePage(browsePage - 1);
+  }
+});
+btnPageNext.addEventListener("click", () => {
+  changeBrowsePage(browsePage + 1);
+});
 btnReshuffle.addEventListener("click", reshuffleFiltered);
 toggleSmartShuffle.addEventListener("change", onPlaybackPreferencesChanged);
 toggleHideWatched.addEventListener("change", onPlaybackPreferencesChanged);

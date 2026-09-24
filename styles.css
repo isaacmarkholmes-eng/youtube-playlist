@@ -429,6 +429,43 @@ input:focus {
   border: 0;
 }
 
+.page-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 0.85rem;
+}
+
+.page-controls[hidden] {
+  display: none;
+}
+
+#page-label {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+#btn-page-prev,
+#btn-page-next {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.page-controls button:disabled {
+  opacity: 0.35;
+}
+
+.tv-remote .queue-item,
+.tv-remote button {
+  transition: none;
+}
+
+.tv-remote .queue {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .queue {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
