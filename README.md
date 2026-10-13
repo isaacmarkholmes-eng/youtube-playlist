@@ -113,13 +113,16 @@ This updates `dynamic-videos.js` with the latest RSS entries plus the 50 most re
 - Turn off **Smart shuffle** for classic random ordering.
 - Watched videos show a small **Watched** badge in the browse grid.
 
-## Samsung TV home screen app
+## Samsung TV app (bundled, TV-only)
 
-To install Video Lounge as a **Samsung TV app icon** (free personal sideload), see:
+The **`tizen/`** folder is a self-contained Samsung TV app (not a Netlify redirect). Sync shared files before each build:
 
-**[tizen/TIZEN-SETUP.md](tizen/TIZEN-SETUP.md)**
+```bash
+python scripts/sync-tizen-app.py
+```
 
-That guide covers Tizen Studio, free Samsung certificates, and installing the `.wgt` launcher on your TV.
+Install guide: **[tizen/TIZEN-SETUP.md](tizen/TIZEN-SETUP.md)**  
+Website vs TV branches: **[docs/BRANCHES.md](docs/BRANCHES.md)**
 
 ## Notes
 

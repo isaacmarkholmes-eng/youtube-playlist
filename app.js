@@ -23,6 +23,9 @@ const pageControlsEl = document.getElementById("page-controls");
 const pageLabelEl = document.getElementById("page-label");
 const btnPagePrev = document.getElementById("btn-page-prev");
 const btnPageNext = document.getElementById("btn-page-next");
+const btnTheater = document.getElementById("btn-theater");
+const videoShuffleNoteEl = document.getElementById("video-shuffle-note");
+const browseHeadingEl = document.getElementById("browse-heading");
 
 const DYNAMIC_CACHE_KEY = "video-lounge-dynamic-cache";
 const WATCH_HISTORY_KEY = "video-lounge-watch-history";
@@ -49,6 +52,7 @@ let watchedIdSet = new Set();
 let playbackPaused = false;
 let savedFocusKey = "";
 let browsePage = 0;
+let theaterMode = false;
 const TV_PAGE_SIZE = 9;
 
 function shuffle(list) {
@@ -65,13 +69,16 @@ function loadPreferences() {
     const prefs = JSON.parse(localStorage.getItem(PREFERENCES_KEY) || "{}");
     smartShuffleEnabled = prefs.smartShuffleEnabled !== false;
     hideWatched = Boolean(prefs.hideWatched);
+    theaterMode = Boolean(prefs.theaterMode);
   } catch (error) {
     smartShuffleEnabled = true;
     hideWatched = false;
+    theaterMode = false;
   }
 
   toggleSmartShuffle.checked = smartShuffleEnabled;
   toggleHideWatched.checked = hideWatched;
+  applyTheaterMode();
   updateSubtitle();
 }
 
@@ -81,8 +88,23 @@ function savePreferences() {
     JSON.stringify({
       smartShuffleEnabled,
       hideWatched,
+      theaterMode,
     }),
   );
+}
+
+function applyTheaterMode() {
+  document.body.classList.toggle("theater-mode", theaterMode && !isTvRemote());
+  if (btnTheater) {
+    btnTheater.textContent = theaterMode ? "Default view" : "Theater mode";
+    btnTheater.setAttribute("aria-pressed", theaterMode ? "true" : "false");
+  }
+}
+
+function toggleTheaterMode() {
+  theaterMode = !theaterMode;
+  savePreferences();
+  applyTheaterMode();
 }
 
 function loadWatchHistory() {
@@ -261,10 +283,21 @@ function isTizenTv() {
 }
 
 function isTvRemote() {
+  if (window.VIDEO_LOUNGE_TV_ONLY === true) {
+    return true;
+  }
   if (isTizenTv()) {
     return true;
   }
   return (window.location.search || "").indexOf("tv=1") !== -1;
+}
+
+function feedBaseUrl() {
+  const raw = window.VIDEO_LOUNGE_FEED_BASE;
+  if (typeof raw !== "string" || raw.trim() === "") {
+    return "";
+  }
+  return raw.trim().replace(/\/+$/, "");
 }
 
 function configurePlayerForPlatform() {
@@ -272,6 +305,12 @@ function configurePlayerForPlatform() {
 
   if (isTvRemote()) {
     document.body.classList.add("tv-remote");
+    if (browseHeadingEl) {
+      browseHeadingEl.textContent = "Browse";
+    }
+    if (btnTheater) {
+      btnTheater.hidden = true;
+    }
     player.removeAttribute("sandbox");
     player.setAttribute(
       "allow",
@@ -575,7 +614,10 @@ function renderBrowseGrid() {
     channelName.textContent = video.channel;
     channelRow.appendChild(channelName);
 
-    item.append(thumbWrap, title, channelRow);
+    const body = document.createElement("span");
+    body.className = "queue-item-body";
+    body.append(title, channelRow);
+    item.append(thumbWrap, body);
     item.addEventListener("click", () => {
       if (shuffledIndex >= 0) {
         playAt(shuffledIndex);
@@ -605,8 +647,12 @@ function updateNowPlaying(video, index) {
   metaEl.innerHTML = "";
   metaEl.append(createChannelIcon(video.channel, { small: true }));
   const metaText = document.createElement("span");
-  metaText.textContent = `${video.channel} · ${index + 1} of ${shuffled.length} in ${getShuffleModeLabel()}`;
+  metaText.className = "now-playing-channel";
+  metaText.textContent = video.channel;
   metaEl.appendChild(metaText);
+  if (videoShuffleNoteEl) {
+    videoShuffleNoteEl.textContent = `${index + 1} of ${shuffled.length} · ${getShuffleModeLabel()}`;
+  }
   renderCurrentTags(video);
   renderBrowseGrid();
 }
@@ -828,7 +874,9 @@ function refreshLibraryUi(preservePlayback = true) {
 }
 
 async function fetchChannelFeed(channel) {
-  const endpoint = `/.netlify/functions/youtube-rss?channelId=${encodeURIComponent(channel.channelId)}`;
+  const base = feedBaseUrl();
+  const path = `/.netlify/functions/youtube-rss?channelId=${encodeURIComponent(channel.channelId)}`;
+  const endpoint = base ? `${base}${path}` : path;
   const response = await fetch(endpoint);
   if (!response.ok) {
     throw new Error(`Feed request failed (${response.status})`);
@@ -858,6 +906,14 @@ async function refreshDynamicChannels() {
     return 0;
   }
 
+  if (!feedBaseUrl()) {
+    rebuildVideoLibrary();
+    if (window.VIDEO_LOUNGE_TV_ONLY === true) {
+      setDynamicStatus("");
+    }
+    return 0;
+  }
+
   setDynamicStatus("Checking configured channels for new uploads…");
 
   const previousCount = videos.length;
@@ -883,7 +939,11 @@ async function refreshDynamicChannels() {
   if (added > 0) {
     setDynamicStatus(`Added ${added} new video${added === 1 ? "" : "s"} from auto-updating channels.`);
   } else if (feedSuccesses === 0 && feedFailures > 0) {
-    setDynamicStatus("Auto-update needs Netlify hosting. Using bundled Sportsnet videos for now.");
+    setDynamicStatus(
+      window.VIDEO_LOUNGE_TV_ONLY === true
+        ? "Channel refresh failed. Check VIDEO_LOUNGE_FEED_BASE in tv-settings.js."
+        : "Auto-update needs Netlify hosting. Using bundled Sportsnet videos for now.",
+    );
   } else {
     setDynamicStatus("Channel feeds checked. No new uploads since your last visit.");
   }
@@ -1265,6 +1325,9 @@ btnReshuffle.addEventListener("click", reshuffleFiltered);
 toggleSmartShuffle.addEventListener("change", onPlaybackPreferencesChanged);
 toggleHideWatched.addEventListener("change", onPlaybackPreferencesChanged);
 btnClearHistory.addEventListener("click", onClearWatchHistory);
+if (btnTheater) {
+  btnTheater.addEventListener("click", toggleTheaterMode);
+}
 searchInput.addEventListener("input", onSearchInput);
 document.addEventListener("keydown", onTvKeyDown, true);
 player.addEventListener("load", onPlayerFrameLoad);
