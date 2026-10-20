@@ -31,4 +31,16 @@ window.DYNAMIC_CHANNELS = [
     handle: "kurzgesagt",
     tags: ["Science", "Education", "Animation"],
   },
+  {
+    channelId: "UCHpe0VGgt2dm63CxJVCPrYw",
+    channel: "Spinosnack",
+    handle: "Spinosnack",
+    tags: ["Dinosaurs", "Nature", "Science"],
+  },
+  {
+    channelId: "UCphTF9wHwhCt-BzIq-s4V-g",
+    channel: "What If",
+    handle: "whatifscienceshow",
+    tags: ["Science", "Education"],
+  },
 ];

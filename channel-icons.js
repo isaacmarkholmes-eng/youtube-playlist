@@ -7,7 +7,9 @@ window.CHANNEL_ICONS = {
   "Moriah Elizabeth": "https://yt3.googleusercontent.com/tUN7K7JcmMSzhEs3lYUu2LVM23Jp2VZdpVM7V8Hva9LXjI7lz6MVUvAICKT9kl_jgQuBwxfi=s900-c-k-c0x00ffffff-no-rj",
   "Odd Animal Specimens": "https://yt3.googleusercontent.com/cBPSSE416_IJVaHINNZWKl08GPZK3TInvrpS7Or446P6kzrqcAUps5AipcXvzsf2ImJndv7O9w=s900-c-k-c0x00ffffff-no-rj",
   "RedLetterMedia": "https://yt3.googleusercontent.com/ytc/AIdro_n98yLJDWtiZyJmgHBIRSYsA7qgDMJJdAHs4Zs-tgMI8iQ=s900-c-k-c0x00ffffff-no-rj",
+  "Spinosnack": "https://yt3.googleusercontent.com/GoyLNE9RmJ2BTcg6KCtbwTIQNObN6SCgCXBHgvIWORmm2e4kG3Y3VU_00-Se48VWVGzFcsY4qA=s900-c-k-c0x00ffffff-no-rj",
   "Sportsnet": "https://yt3.googleusercontent.com/ytc/AIdro_lhlHXzqaG5uUBTU0OaM53lnRcb94wt34nf_m9kIElWBOk=s900-c-k-c0x00ffffff-no-rj",
   "TerraGreen1": "https://yt3.googleusercontent.com/wM1wPhLHjeNgDA1eJFvinz6sP9tR_miBnSVnzwmJuVykagPi677ZUXOwnPctiK1ZM6itMOtMpNY=s900-c-k-c0x00ffffff-no-rj",
+  "What If": "https://yt3.googleusercontent.com/WP_MOFBiMTT1ZN-rDZ85RzxSu-JXwf1e-Dyz6MwUy2arqo2uotw-MH5EeaMCAOtMFblM52QO=s900-c-k-c0x00ffffff-no-rj",
   "WolfeyVGC": "https://yt3.googleusercontent.com/og8-k9sj6tzQR_6ze8iWjtPrE7uIqu7tzNhEAC1UKvlggs8FzvVPr3p3vBmGvbrym9zDdOkL=s900-c-k-c0x00ffffff-no-rj",
 };
