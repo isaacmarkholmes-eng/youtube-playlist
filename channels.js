@@ -19,4 +19,16 @@ window.DYNAMIC_CHANNELS = [
     handle: "OddAnimalSpecimens",
     tags: ["Nature", "Animals", "Science"],
   },
+  {
+    channelId: "UCYAB7hh1ohA8-iX54EpMdeA",
+    channel: "Moriah Elizabeth",
+    handle: "MoriahElizabeth",
+    tags: ["Art", "Craft", "DIY"],
+  },
+  {
+    channelId: "UCsXVk37bltHxD1rDPwtNM8Q",
+    channel: "Kurzgesagt",
+    handle: "kurzgesagt",
+    tags: ["Science", "Education", "Animation"],
+  },
 ];
