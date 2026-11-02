@@ -43,4 +43,10 @@ window.DYNAMIC_CHANNELS = [
     handle: "whatifscienceshow",
     tags: ["Science", "Education"],
   },
+  {
+    channelId: "UCHsRtomD4twRf5WVHHk-cMw",
+    channel: "TierZoo",
+    handle: "TierZoo",
+    tags: ["Gaming", "Nature", "Education"],
+  },
 ];
